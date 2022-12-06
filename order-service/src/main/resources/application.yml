@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: order-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/order-service?sslMode=DISABLED&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true
+    username: root
+    password: mysql
+  jpa:
+    hibernate:
+      ddl-auto: update
+server:
+  port: 8081
