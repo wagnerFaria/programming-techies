@@ -11,3 +11,6 @@ spring:
       ddl-auto: update
 server:
   port: 8081
+  error:
+    include-stacktrace: ON_PARAM
+
