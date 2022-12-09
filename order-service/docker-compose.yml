@@ -4,7 +4,8 @@ services:
 
   db:
     image: mysql
-    container_name: mysql_order_service
+    restart: always
+    container_name: mysql-general
     command: --default-authentication-plugin=mysql_native_password
     ports:
       - 3306:3306
