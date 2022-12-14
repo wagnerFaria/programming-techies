@@ -26,7 +26,7 @@ public class OrderService {
 
     private final WebClient.Builder webClientBuilder;
 
-    public void placeOrder(OrderRequest orderRequest) {
+    public String placeOrder(OrderRequest orderRequest) {
 
         Order order = Order
                 .builder()
@@ -58,6 +58,7 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is not in stock, please try again later");
 
         orderRepository.save(order);
+        return "Order Placed Successfully";
     }
 
     private OrderLineItems mapToEntity(OrderLineItemsDto orderLineItemsDto) {
