@@ -27,6 +27,15 @@ public class OrderContoller {
         return CompletableFuture.supplyAsync(() -> orderService.placeOrder(orderRequest));
     }
 
+    // without circuit breaker you can see the entire path on zipkin
+    // circuit breaker creates a thread for each request
+//    @PostMapping
+//    @ResponseStatus(HttpStatus.CREATED)
+//    public String placeOrder(@RequestBody OrderRequest orderRequest) {
+//        return orderService.placeOrder(orderRequest);
+//    }
+
+
     public CompletableFuture<String> fallbackMethod(OrderRequest orderRequest, RuntimeException runtimeException) {
         return CompletableFuture.supplyAsync(() -> "Ooops! Something went wrong, please order after some time");
     }

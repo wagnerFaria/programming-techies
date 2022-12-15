@@ -7,6 +7,8 @@ import com.programmingtechie.orderservice.model.Order;
 import com.programmingtechie.orderservice.model.OrderLineItems;
 import com.programmingtechie.orderservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cloud.sleuth.Span;
+import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,8 @@ public class OrderService {
 
     private final WebClient.Builder webClientBuilder;
 
+    private final Tracer tracer;
+
     public String placeOrder(OrderRequest orderRequest) {
 
         Order order = Order
@@ -42,23 +46,29 @@ public class OrderService {
 
         List<String> skyCodes = order.getOrderLineItemsList().stream().map(OrderLineItems::getSkuCode).toList();
 
-        // Call inventory service, and place order if product is in stock
-        InventoryResponse[] inventoryResponseArray = webClientBuilder.build()
-                .get()
-                .uri("http://inventory-service/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skyCodes).build())
-                .retrieve()
-                .bodyToMono(InventoryResponse[].class) // the returning class
-                .block();// to make it syncronous request
+        Span inventoryServiceLookup = tracer.nextSpan().name("InventoryServiceLookup");
+        try (Tracer.SpanInScope spanInScope = tracer.withSpan(inventoryServiceLookup.start())) {
+            // Call inventory service, and place order if product is in stock
+            InventoryResponse[] inventoryResponseArray = webClientBuilder.build()
+                    .get()
+                    .uri("http://inventory-service/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skyCodes).build())
+                    .retrieve()
+                    .bodyToMono(InventoryResponse[].class) // the returning class
+                    .block();// to make it syncronous request
 
-        boolean allProductsInStrock = Arrays
-                .stream(inventoryResponseArray)
-                .allMatch(InventoryResponse::isInStock);
+            boolean allProductsInStrock = Arrays
+                    .stream(inventoryResponseArray)
+                    .allMatch(InventoryResponse::isInStock);
 
-        if (!allProductsInStrock)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is not in stock, please try again later");
+            if (!allProductsInStrock)
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is not in stock, please try again later");
 
-        orderRepository.save(order);
-        return "Order Placed Successfully";
+            orderRepository.save(order);
+            return "Order Placed Successfully";
+        } finally {
+            inventoryServiceLookup.end();
+        }
+
     }
 
     private OrderLineItems mapToEntity(OrderLineItemsDto orderLineItemsDto) {
